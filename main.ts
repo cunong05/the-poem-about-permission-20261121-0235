@@ -6,7 +6,7 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const POEM = [
@@ -20,12 +20,21 @@ const POEM = [
   'and stays, because I did not take it.',
 ].join('\n');
 
-// The gate counts Unicode code points: 1 to 280, at least one not white.
-const length = [...POEM].length;
-if (length < 1 || length > 280) throw new Error(`poem is ${length} characters, gate needs 1-280`);
-if (!POEM.trim()) throw new Error('poem must not be only white space');
+// Validate the poem against the gate rules and return its length in
+// Unicode code points. The gate requires 1 to 280 code points and at
+// least one non-whitespace character.
+function validatePoem(text: string): number {
+  const length = [...text].length;
+  if (length < 1 || length > 280) throw new Error(`poem is ${length} characters, gate needs 1-280`);
+  if (!text.trim()) throw new Error('poem must not be only white space');
+  return length;
+}
+
+const length = validatePoem(POEM);
 
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, 'entry.txt'), POEM, 'utf8');
+// Byte-for-byte self-check: what landed on disk must equal POEM exactly.
+if (readFileSync(join(outDir, 'entry.txt'), 'utf8') !== POEM) throw new Error('written entry.txt does not match POEM byte-for-byte');
 console.log(`poem about permission: ${length} characters written to ${join(outDir, 'entry.txt')}`);
